@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
+	"time"
 )
 
 func main() {
@@ -13,6 +15,7 @@ func main() {
 	mux.HandleFunc("/task/{id}/", handleTaskByID)
 	mux.HandleFunc("/task/{id}/status", handleTaskStatusByID)
 	mux.HandleFunc("GET /home", handleHome)
+	mux.HandleFunc("GET /wait/{waitsecs}", handleWait)
 
 	loggedMux := withLog(mux)
 
@@ -23,8 +26,9 @@ func main() {
 // Middleware
 func withLog(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("[%s] %s %s", r.Method, r.RequestURI, r.RemoteAddr)
+		startTime := time.Now()
 		next.ServeHTTP(w, r)
+		log.Printf("[%s] %s %s %s", r.Method, r.RequestURI, r.RemoteAddr, time.Since(startTime))
 	})
 }
 
@@ -41,4 +45,15 @@ func handleTaskStatusByID(w http.ResponseWriter, r *http.Request) {
 
 func handleHome(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, "home\n")
+}
+
+func handleWait(w http.ResponseWriter, r *http.Request) {
+	waitsecs, err := strconv.Atoi(r.PathValue("waitsecs"))
+	if err != nil {
+		w.WriteHeader(500)
+		fmt.Fprintf(w, "Error getting wait value \n")
+		return
+	}
+	time.Sleep(time.Duration(waitsecs) * time.Second)
+	fmt.Fprintf(w, "Waitted %d seconds\n", waitsecs)
 }
