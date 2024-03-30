@@ -10,30 +10,16 @@ import (
 
 func main() {
 
-	mux := http.NewServeMux()
+	httpServer := NewHttpServer("localhost:8090")
 
-	mux.HandleFunc("/task/{id}/", handleTaskByID)
-	mux.HandleFunc("/task/{id}/status", handleTaskStatusByID)
-	mux.HandleFunc("GET /{$}", handleHome)
-	mux.HandleFunc("GET /wait/{waitsecs}", handleWait)
-	mux.HandleFunc("GET /static/{filename...}", handleServeFile)
+	httpServer.AddHandleFunc("/task/{id}/", handleTaskByID)
+	httpServer.AddHandleFunc("/task/{id}/status", handleTaskStatusByID)
+	httpServer.AddHandleFunc("GET /{$}", handleHome)
+	httpServer.AddHandleFunc("GET /wait/{waitsecs}", handleWait)
+	httpServer.AddHandleFunc("GET /static/{filename...}", handleServeFile)
 
-	loggedMux := withLog(mux)
+	httpServer.Run()
 
-	log.Default().Println("Booting server")
-	http.ListenAndServe("localhost:8090", loggedMux)
-}
-
-// Middleware
-func withLog(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		startTime := time.Now()
-		next.ServeHTTP(w, r)
-		//log.Printf("%+v", r)
-		//log.Printf("%+v", r.Context())
-		//log.Printf("%+v", w.Header())
-		log.Printf("[%s] %s %s %s", r.Method, r.RequestURI, r.RemoteAddr, time.Since(startTime))
-	})
 }
 
 // Handlers
@@ -65,4 +51,37 @@ func handleWait(w http.ResponseWriter, r *http.Request) {
 func handleServeFile(w http.ResponseWriter, r *http.Request) {
 	path := "static/" + r.PathValue("filename")
 	http.ServeFile(w, r, path)
+}
+
+type HttpServer struct {
+	mux     *http.ServeMux
+	address string
+}
+
+func NewHttpServer(address string) HttpServer {
+	return HttpServer{
+		mux:     http.NewServeMux(),
+		address: address,
+	}
+}
+
+func (h *HttpServer) AddHandleFunc(pattern string, handler func(http.ResponseWriter, *http.Request)) {
+	h.mux.HandleFunc(pattern, handler)
+}
+
+func (h *HttpServer) Logger(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		startTime := time.Now()
+		next.ServeHTTP(w, r)
+		//log.Printf("%+v", r)
+		//log.Printf("%+v", r.Context())
+		//log.Printf("%+v", w.Header())
+		log.Printf("[%s] %s %s %s", r.Method, r.RequestURI, r.RemoteAddr, time.Since(startTime))
+	})
+}
+
+func (h *HttpServer) Run() {
+	log.Println("Booting server")
+	loggedMux := h.Logger(h.mux)
+	http.ListenAndServe(h.address, loggedMux)
 }
