@@ -14,8 +14,18 @@ func main() {
 	mux.HandleFunc("/task/{id}/status", handleTaskStatusByID)
 	mux.HandleFunc("GET /home", handleHome)
 
+	loggedMux := withLog(mux)
+
 	log.Default().Println("Booting server")
-	http.ListenAndServe("localhost:8090", mux)
+	http.ListenAndServe("localhost:8090", loggedMux)
+}
+
+// Middleware
+func withLog(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("[%s] %s %s", r.Method, r.RequestURI, r.RemoteAddr)
+		next.ServeHTTP(w, r)
+	})
 }
 
 // Handlers
