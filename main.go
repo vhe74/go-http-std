@@ -31,17 +31,14 @@ func withLog(next http.Handler) http.Handler {
 // Handlers
 func handleTaskByID(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
-	log.Printf("200 GET /task/%s", id)
 	fmt.Fprintf(w, "handling task with id=%v\n", id)
 }
 
 func handleTaskStatusByID(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
-	log.Printf("200 GET /task/%s/status", id)
 	fmt.Fprintf(w, "handling task status with id=%v\n", id)
 }
 
 func handleHome(w http.ResponseWriter, r *http.Request) {
-	log.Println("200 GET /home")
 	fmt.Fprint(w, "home\n")
 }
